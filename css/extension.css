@@ -1,0 +1,45 @@
+table {
+    border: 1px solid #ccc;
+    padding:0px;
+    margin:0px;
+}
+
+table td{
+    border: 1px solid #ccc;
+    padding:5px;
+    text-align:left;
+    font-size:12px
+}
+
+#tool_form , #tool_res {
+    background-color: #fff;
+}
+
+#tool_form{
+    float:left;
+    width:400px;
+    margin-left:20px;
+    border:1px solid #ccc;
+
+}
+
+#tool_form p {
+    margin-top:5px;
+    margin-bottom:15px;
+    border-bottom: 1px solid #ccc;
+    vertical-align: top;
+    padding:5px;
+}
+
+#tool_res{
+    float:left;
+    width:600px;
+    margin-left:20px;
+
+    border:1px solid #ccc;
+}
+
+#tool_res thead td {
+    background-color: #f0f0f0;
+    font-weight: bold;
+}
