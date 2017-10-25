@@ -27,33 +27,93 @@ var main = {
                 .insertBefore($("#container"));
 
 
-            $("#gogogo").click(main.gogogo);
+            $("#gogogo").click(function(){
+                main.gogogo();
+            });
             //setTimeout(main.startJob, 1000);
         }
     },
 
-    // search:function(token,keyword,device){
-    //
-    //     var url = "https://sycm.taobao.com/mq/searchword/relatedWord.json" ;
-    //         // "?dateRange=" +
-    //         // date+"%7C"+date+"&dateType=recent1&device="+device+"&keyword=" + URLEncoder.encode(keyword, "utf-8")
-    //         // + "&token="+token+"&_="+System.currentTimeMillis();
-    //     var  date=$.datepicker.formatDate('yyyy-MM-dd',new Date());
-    //     var params={
-    //         dateRange:date+"|"+date,
-    //         dateType:"recent1",
-    //         device:device,
-    //         keyword:keyword,
-    //         token:token,
-    //         _:new Date().getTime()
-    //     }
-    //
-    //     ajaxTemplate(url,params,function(){
-    //
-    //     },null,function(){
-    //
-    //     },null);
-    // },
+    search:function(token,keywords,device,whenDone){
+
+        var _this=this;
+
+        if(keywords.length<=0){
+            return whenDone.call(this,keywords);
+        }
+
+        var keyword=keywords.shift();
+        var yestoday=new Date(new Date().getTime()-24*3600*1000);
+        keyword = keyword.trim();
+        if(!keyword ||keyword.length<=0){
+            return this.search(token,keywords,device,whenDone);
+        }
+
+        var  date=getDateFormatStr(yestoday);
+        var params={
+            dateRange:date+"|"+date,
+            dateType:"recent1",
+            device:device,
+            keyword:keyword,
+            token:token,
+            _:new Date().getTime()
+        }
+
+        var process=function(data, textStatus){
+            var json=null;
+            if(data&&data["content"]&&data["content"]["data"]){
+                var d=data["content"]["data"];
+                for(var i=0;i<d.length;i++){
+                    var di=d[i];
+                    if(di["keyword"]==keyword){
+                        json=di;
+                        break;
+                    }
+                }
+            }
+            if (!json) {
+                json = {keyword: keyword, suv: "", onlineGoodsCnt: "", clickHot: "", payConvRate: ""}
+            }
+
+            var tpl = "<tr><td>$keyword</td><td>$suv</td><td>$onlineGoodsCnt</td><td>$clickHot</td><td>$payConvRate</td></tr>";
+
+            var tr = tpl;
+            for (var key in json) {
+                tr = tr.replace("$" + key, json[key]);
+            }
+            $("#res tbody").append(tr);
+
+            var delay=1000+Math.floor( Math.random()*3000)
+
+            setTimeout(function(){
+                _this.search(token,keywords,device,whenDone);
+            },delay);
+
+            console.log("关键词："+keyword+" 完成，等待 "+delay+"ms 继续查询下一个词");
+        }
+
+        $.ajax({
+            url:"https://sycm.taobao.com/mq/searchword/relatedWord.json",
+            type:"GET",
+            timeout:30000,
+            data:params,
+            dataType:"json",
+            success:process,
+            error:process
+        })
+
+        // chrome.runtime.sendMessage({
+        //     method: 'GET',
+        //     action: 'ajax',
+        //     url: 'https://sycm.taobao.com/mq/searchword/relatedWord.json',
+        //     data: params
+        // },function (data) {
+        //
+        //
+        //
+        // });
+
+    },
 
     gogogo:function(){
 
@@ -68,7 +128,7 @@ var main = {
         // $("#gogogo").attr("disabled",true);
         document.getElementById("gogogo").disabled=true;
         $("#gogogo").val("查询中....")
-        try {
+        // try {
 
             var token="";
             var cc=document.querySelector('meta[name="microdata"]').getAttribute('content');
@@ -90,74 +150,79 @@ var main = {
 
             $("#res tbody").html("");
 
-            var tpl = "<tr><td>$keyword</td><td>$suv</td><td>$onlineGoodsCnt</td><td>$clickHot</td><td>$payConvRate</td></tr>";
-
-            var ajaxs=[];
-            var ks = keywords.split("\n");
-            var yestoday=new Date(new Date().getTime()-24*3600*1000);
-            for (var i = 0; i < ks.length; i++) {
-                var keyword = ks[i];
-                keyword = keyword.trim();
-
-                var  date=getDateFormatStr(yestoday);
-                var params={
-                    dateRange:date+"|"+date,
-                    dateType:"recent1",
-                    device:device,
-                    keyword:keyword,
-                    token:token,
-                    _:new Date().getTime()
-                }
-
-                ajaxs.push( Promise.resolve(new Promise(function (resolve, reject){
-                    chrome.runtime.sendMessage({
-                        method: 'GET',
-                        action: 'ajax',
-                        url: 'https://sycm.taobao.com/mq/searchword/relatedWord.json',
-                        data: params
-                    },function (data) {
-                        resolve(data);
-                    });
-                })));
-
-
-            }
-
-            Promise.each(ajaxs,function(data, num, jqXHR){
-                var k=ks[num]
-                var json=null;
-                if(data&&data["content"]&&data["content"]["data"]){
-                    var d=data["content"]["data"];
-                    for(var i=0;i<d.length;i++){
-                        var di=d[i];
-                        if(di["keyword"]==k){
-                            json=di;
-                            break;
-                        }
-                    }
-                }
-                if (!json) {
-                    json = {keyword: k, suv: "", onlineGoodsCnt: "", clickHot: "", payConvRate: ""}
-                }
-
-                var tr = tpl;
-                for (var key in json) {
-                    tr = tr.replace("$" + key, json[key]);
-                }
-                $("#res tbody").append(tr);
-
-                console.log(json);
-            }).then(function(){
+            keywords=keywords.split("\n");
+            this.search(token,keywords,device,function(keywords){
                 console.log('完成');
                 $("#gogogo").val("查询完成")
-                //alert("查完！");
-            });
+                document.getElementById("gogogo").disabled=false;
+            })
 
 
-        }finally {
-            // $("#gogogo").attr("disabled", false);
-            document.getElementById("gogogo").disabled=false;
-        }
+
+            // var ajaxs=[];
+            // var ks = keywords.split("\n");
+            // var yestoday=new Date(new Date().getTime()-24*3600*1000);
+            // for (var i = 0; i < ks.length; i++) {
+            //     var keyword = ks[i];
+            //     keyword = keyword.trim();
+            //
+            //     var  date=getDateFormatStr(yestoday);
+            //     var params={
+            //         dateRange:date+"|"+date,
+            //         dateType:"recent1",
+            //         device:device,
+            //         keyword:keyword,
+            //         token:token,
+            //         _:new Date().getTime()
+            //     }
+            //
+            //     ajaxs.push( Promise.resolve(new Promise(function (resolve, reject){
+            //         chrome.runtime.sendMessage({
+            //             method: 'GET',
+            //             action: 'ajax',
+            //             url: 'https://sycm.taobao.com/mq/searchword/relatedWord.json',
+            //             data: params
+            //         },function (data) {
+            //             resolve(data);
+            //         });
+            //     })));
+            // }
+            //
+            // Promise.each(ajaxs,function(data, num, jqXHR){
+            //     var k=ks[num]
+            //     var json=null;
+            //     if(data&&data["content"]&&data["content"]["data"]){
+            //         var d=data["content"]["data"];
+            //         for(var i=0;i<d.length;i++){
+            //             var di=d[i];
+            //             if(di["keyword"]==k){
+            //                 json=di;
+            //                 break;
+            //             }
+            //         }
+            //     }
+            //     if (!json) {
+            //         json = {keyword: k, suv: "", onlineGoodsCnt: "", clickHot: "", payConvRate: ""}
+            //     }
+            //
+            //     var tr = tpl;
+            //     for (var key in json) {
+            //         tr = tr.replace("$" + key, json[key]);
+            //     }
+            //     $("#res tbody").append(tr);
+            //
+            //     console.log(json);
+            // }).then(function(){
+            //     console.log('完成');
+            //     $("#gogogo").val("查询完成")
+            //     //alert("查完！");
+            // });
+
+
+        // }finally {
+        //     // $("#gogogo").attr("disabled", false);
+        //     document.getElementById("gogogo").disabled=false;
+        // }
     }
 
 };
