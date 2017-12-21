@@ -1,10 +1,10 @@
 {
 
-    "name": "生意参谋自动查词工具",
+    "name": "生意参谋自动查词工具-新",
     "manifest_version": 2,
     "version": "1.0.0",
     "homepage_url": "http://www.chapaiming.com/",
-    "description": "生意参谋自动查词工具",
+    "description": "生意参谋自动查词工具-新",
     "permissions": ["cookies", "contextMenus", "tabs", "http://*/*", "https://*/*"],
     "icons": {
         "48": "image/bao_logo48x48.png",
@@ -15,7 +15,7 @@
     },
     "browser_action": {
         "default_icon": "image/bao_logo48x48.png",
-        "default_title": "生意参谋自动查词工具",
+        "default_title": "生意参谋自动查词工具-新",
         "default_popup": "html/popup.html"
     },
     "web_accessible_resources": ["js/libs/md5.min.js.map","js/libs/dexie.js.map"] ,
