@@ -31,34 +31,48 @@ var main = {
             $("#gogogo").click(function(){
                 main.gogogo();
             });
-            //setTimeout(main.startJob, 1000);
         }
     },
 
-    search:function(token,keywords,keywordsAll,device,whenDone){
+    search:function(token,keywords,keywordsAll,resultArr,doSome,tempArr,device,whenDone){
         var _this=this;
         if(keywords.length<=0){
             if(keywordsAll.length>0){ //没匹配上任何关键词的相关词处理
                 console.log(keywordsAll);
-                for( var i=0;i<keywordsAll.length;i++){
-                    var tr = "<tr><td>$keyRoot</td><td>$relatedWord</td><td>$suv</td><td>$onlineGoodsCnt</td><td>$clickHot</td><td>$payConvRate</td></tr>";
-                    var json = {keyRoot:"",relatedWord: keywordsAll[i], suv: "", onlineGoodsCnt: "", clickHot: "", payConvRate: ""}
-                    for (var key in json) {
-                        tr = tr.replace("$" + key, json[key]);
+                doSome='noRoot';
+                keywords=keywordsAll;
+                keywordsAll=[];
+                _this.search(token,keywords,keywordsAll,resultArr,doSome,tempArr,device,whenDone)
+            }
+            //得到的结果和关联关键词数组比较进行排序，得到排序之后的新数组
+            var result=[];
+            for (var i=0;i<tempArr.length;i++) {
+                for(var j=0;j<resultArr.length;j++){
+                    var di=resultArr[j];
+                    if(di["keyword"]==tempArr[i]){
+                        result.push(di);
+                        break;
                     }
-                    tr = tr.replace("$keyRoot", keyword);
-                    $("#resChaci").hide();
-                    $("#res").show();
-                    $("#res tbody").append(tr);
                 }
             }
+            console.log("tempArr:"+tempArr);
+            console.log("resultArr:"+resultArr);
+            console.log("result:"+result);
+            //处理结果显示到页面上
+            var str;
+            for(var key in result){
+                str += "<tr><td>"+result[key].rootWord+"</td><td>"+result[key].keyword+"</td><td>"+result[key].suv+"</td><td>"+result[key].onlineGoodsCnt+"</td><td>"+result[key].clickHot+"</td><td>"+result[key].payConvRate+"</td></tr>";
+            };
+            $("#resChaci").hide();
+            $("#res").show();
+            $("#res tbody").append(str);
             return whenDone.call(this,keywords);
         }
         var keyword=keywords.shift();
         var yestoday=new Date(new Date().getTime()-24*3600*1000);
         keyword = keyword.trim();
         if(!keyword ||keyword.length<=0){
-            return this.search(token,keywords,keywordsAll,device,whenDone);
+            return this.search(token,keywords,keywordsAll,resultArr,doSome,tempArr,device,whenDone);
         }
 
         var  date=getDateFormatStr(yestoday);
@@ -72,7 +86,7 @@ var main = {
         }
 
         var process=function(data, textStatus){
-            if(keywordsAll==null||!keywordsAll){
+            if((keywordsAll==null||!keywordsAll)&&doSome==''){//只有查词的时候处理方式
                 var json=null;
                 if(data&&data["content"]&&data["content"]["data"]){
                     var d=data["content"]["data"];
@@ -99,11 +113,47 @@ var main = {
                 $("#resChaci tbody").append(tr);
                 var delay=1000+Math.floor( Math.random()*3000)
                 setTimeout(function(){
-                    _this.search(token,keywords,keywordsAll,device,whenDone);
+                    _this.search(token,keywords,keywordsAll,resultArr,doSome,tempArr,device,whenDone);
                 },delay);
 
                 console.log("关键词："+keyword+" 完成，等待 "+delay+"ms 继续查询下一个词");
-            }else {
+            }else if(doSome=='noRoot'){//处理没有匹配上的关联词
+                var json=null;
+                if(data&&data["content"]&&data["content"]["data"]){
+                    var d=data["content"]["data"];
+                    for(var i=0;i<d.length;i++){
+                        var di=d[i];
+                        if(di["keyword"]==keyword){
+                            json=di;
+                            var oj = new Object();
+                            oj.keyword=json.keyword;
+                            oj.suv=json.suv;
+                            oj.onlineGoodsCnt=json.onlineGoodsCnt;
+                            oj.clickHot=json.clickHot;
+                            oj.payConvRate=json.payConvRate;
+                            oj.rootWord='';
+                            resultArr.push(oj);
+                            break;
+                        }
+                    }
+                    if(!json){
+                        var oj = new Object();
+                        oj.rootWord='';
+                        oj.keyword=keyword;
+                        oj.suv="";
+                        oj.onlineGoodsCnt="";
+                        oj.clickHot="";
+                        oj.payConvRate="";
+                        resultArr.push(oj);
+                    }
+                }
+                var delay=1000+Math.floor( Math.random()*3000)
+                setTimeout(function(){
+                    _this.search(token,keywords,keywordsAll,resultArr,doSome,tempArr,device,whenDone);
+                },delay);
+
+                console.log("关键词："+keyword+" 完成，等待 "+delay+"ms 继续查询下一个词");
+            }else {//同时查关联词时的处理方式
                 var backArr=[];
                 if(data&&data["content"]&&data["content"]["data"]){
                     var d=data["content"]["data"];
@@ -116,32 +166,30 @@ var main = {
                 console.log("获取的相关词："+backArr);
                 for (var i=0;i<keywordsAll.length;i++) {
                     var json=null;
-                    var tr = "<tr><td>$keyRoot</td><td>$relatedWord</td><td>$suv</td><td>$onlineGoodsCnt</td><td>$clickHot</td><td>$payConvRate</td></tr>";
-                    tr=tr.replace("$relatedWord", keywordsAll[i]);
                     for(var j=0;j<d.length;j++){
                         var di=d[j];
                         var rr=di["keyword"];
                         if(di["keyword"]==keywordsAll[i]){
                             json=di;
+                            json.rootWord=keyword;
                             keywordsAll.splice(i, 1);//匹配之后就删除
                             i = i-1;
-                            console.log(keywordsAll);
+                            var oj=new Object();
+                            oj.rootWord=keyword;
+                            oj.keyword=json.keyword;
+                            oj.suv=json.suv;
+                            oj.onlineGoodsCnt=json.onlineGoodsCnt;
+                            oj.clickHot=json.clickHot;
+                            oj.payConvRate=json.payConvRate;
+                            resultArr.push(oj);
+                            console.log(resultArr);
                             break;
                         }
-                    }
-                    if(json){
-                        for (var key in json) {
-                            tr = tr.replace("$" + key, json[key]);
-                        }
-                        tr = tr.replace("$keyRoot", keyword);
-                        $("#resChaci").hide();
-                        $("#res").show();
-                        $("#res tbody").append(tr);
                     }
                 }
                 var delay=1000+Math.floor( Math.random()*3000)
                 setTimeout(function(){
-                    _this.search(token,keywords,keywordsAll,device,whenDone);
+                    _this.search(token,keywords,keywordsAll,resultArr,doSome,tempArr,device,whenDone);
                 },delay);
                 console.log("关键词："+keyword+" 完成，等待 "+delay+"ms 继续查询下一个词");
             }
@@ -157,35 +205,18 @@ var main = {
             success:process,
             error:process
         })
-
-        // chrome.runtime.sendMessage({
-        //     method: 'GET',
-        //     action: 'ajax',
-        //     url: 'https://sycm.taobao.com/mq/searchword/relatedWord.json',
-        //     data: params
-        // },function (data) {
-        //
-        //
-        //
-        // });
-
     },
     gogogo:function(){
         var device=$("#device").val();
         var keywords=$("#keywords").val();//词根
         var keywordsAll=$("#keywordsAll").val();//关键词列表
+        var tempArr=[];
         if(keywords==null||!keywords){
             alert("必须填写关键词词根");
             return;
         }
-       /* if(keywordsAll==null||!keywordsAll){
-            alert("必须填写关键词清单");
-            return;
-        }*/
-        // $("#gogogo").attr("disabled",true);
         document.getElementById("gogogo").disabled=true;
         $("#gogogo").val("查询中....")
-        // try {
             var token="";
             var cc=document.querySelector('meta[name="microdata"]').getAttribute('content');
             var ccs=cc.split(";");
@@ -207,76 +238,16 @@ var main = {
             keywords=keywords.split("\n");
             if(keywordsAll!=null&&keywordsAll){
                 keywordsAll=keywordsAll.split("\n");
+                tempArr=[].concat(keywordsAll);
             }
-            this.search(token,keywords,keywordsAll,device,function(keywords){
+             //定义一个对象数组,用来存放结果对象
+             var resultArr=[];
+            var doSome='';
+            this.search(token,keywords,keywordsAll,resultArr,doSome,tempArr,device,function(keywords){
                 console.log('完成');
                 $("#gogogo").val("查询完成")
                 document.getElementById("gogogo").disabled=false;
             })
-            // var ajaxs=[];
-            // var ks = keywords.split("\n");
-            // var yestoday=new Date(new Date().getTime()-24*3600*1000);
-            // for (var i = 0; i < ks.length; i++) {
-            //     var keyword = ks[i];
-            //     keyword = keyword.trim();
-            //
-            //     var  date=getDateFormatStr(yestoday);
-            //     var params={
-            //         dateRange:date+"|"+date,
-            //         dateType:"recent1",
-            //         device:device,
-            //         keyword:keyword,
-            //         token:token,
-            //         _:new Date().getTime()
-            //     }
-            //
-            //     ajaxs.push( Promise.resolve(new Promise(function (resolve, reject){
-            //         chrome.runtime.sendMessage({
-            //             method: 'GET',
-            //             action: 'ajax',
-            //             url: 'https://sycm.taobao.com/mq/searchword/relatedWord.json',
-            //             data: params
-            //         },function (data) {
-            //             resolve(data);
-            //         });
-            //     })));
-            // }
-            //
-            // Promise.each(ajaxs,function(data, num, jqXHR){
-            //     var k=ks[num]
-            //     var json=null;
-            //     if(data&&data["content"]&&data["content"]["data"]){
-            //         var d=data["content"]["data"];
-            //         for(var i=0;i<d.length;i++){
-            //             var di=d[i];
-            //             if(di["keyword"]==k){
-            //                 json=di;
-            //                 break;
-            //             }
-            //         }
-            //     }
-            //     if (!json) {
-            //         json = {keyword: k, suv: "", onlineGoodsCnt: "", clickHot: "", payConvRate: ""}
-            //     }
-            //
-            //     var tr = tpl;
-            //     for (var key in json) {
-            //         tr = tr.replace("$" + key, json[key]);
-            //     }
-            //     $("#res tbody").append(tr);
-            //
-            //     console.log(json);
-            // }).then(function(){
-            //     console.log('完成');
-            //     $("#gogogo").val("查询完成")
-            //     //alert("查完！");
-            // });
-
-
-        // }finally {
-        //     // $("#gogogo").attr("disabled", false);
-        //     document.getElementById("gogogo").disabled=false;
-        // }
     }
 
 };
