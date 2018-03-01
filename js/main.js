@@ -36,14 +36,12 @@ var main = {
 
     search:function(token,keywords,keywordsAll,resultArr,doSome,tempArr,device,whenDone){
         var _this=this;
-        if(keywords.length<=0){
-            if(keywordsAll.length>0){ //没匹配上任何关键词的相关词处理
-                console.log(keywordsAll);
-                doSome='noRoot';
-                keywords=keywordsAll;
-                keywordsAll=[];
-                _this.search(token,keywords,keywordsAll,resultArr,doSome,tempArr,device,whenDone)
-            }
+        if(keywords.length<=0&&keywordsAll.length>0){
+            doSome='noRoot';
+            keywords=keywordsAll;
+            keywordsAll=[];
+        }
+        if(keywords.length<=0&&tempArr.length>0){
             //得到的结果和关联关键词数组比较进行排序，得到排序之后的新数组
             var result=[];
             for (var i=0;i<tempArr.length;i++) {
@@ -66,6 +64,10 @@ var main = {
             $("#resChaci").hide();
             $("#res").show();
             $("#res tbody").append(str);
+            tempArr=[];//为了不影响只查词的功能
+            return whenDone.call(this,keywords);
+        }
+        if(keywords.length<=0){
             return whenDone.call(this,keywords);
         }
         var keyword=keywords.shift();
