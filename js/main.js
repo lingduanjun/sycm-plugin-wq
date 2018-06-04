@@ -212,7 +212,7 @@ var main = {
                         }
                         var delay = 1000;
                         setTimeout(function () {
-                            _this.search(planId, token, keywords, keywordsAll, resultArr, relatedDataArr, doSome, tempArr, device, whenDone);
+                            _this.search(token, keywords, keywordsAll, resultArr, doSome, tempArr, device, whenDone);
                         }, delay);
                         console.log("关键词词根没结果的：" + keyword + " 完成，等待 " + delay + "ms 继续查询下一个词");
                     }
@@ -234,7 +234,7 @@ var main = {
                     }
                     var delay = 1000;
                     setTimeout(function () {
-                        _this.search(planId, token, keywords, keywordsAll, resultArr, relatedDataArr, doSome, tempArr, device, whenDone);
+                        _this.search(token, keywords, keywordsAll, resultArr, doSome, tempArr, device, whenDone);
                     }, delay);
                     console.log("出錯的关键词：" + keyword + " 完成，等待 " + delay + "ms 继续查询下一个词");
                 }
