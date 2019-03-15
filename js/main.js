@@ -15,7 +15,7 @@ var main = {
             // $("<p>自动查词插件V0.1</p><button id='flag_btn'></button>是否自动运行<p id='jobstart_status'></p><button id='test_btn'></button>").insertBefore($("#mainTable"));
 
 
-            $("<div id='tool_form'><p>自动查词插件V0.2</p><p>终端：<select id=\"device\">\n" +
+            $("<div id='tool_form'><p>自动查词插件V0.4</p><p>终端：<select id=\"device\">\n" +
                 "            <option value=\"0\" >所有</option>\n" +
                 "            <option value=\"1\" >PC</option>\n" +
                 "            <option value=\"2\" >无线</option>\n" +
@@ -81,17 +81,39 @@ var main = {
         var params={
             dateRange:date+"|"+date,
             dateType:"day",
-            device:device,
+            pageSize:10,
+            page:1,
+            order:"desc",
+            orderBy:"seIpvUvHits",
             keyword:keyword,
-           // token:token,
-            _:new Date().getTime()
+            device:device,
+            //indexCode:"seIpvUvHits,sePvIndex,clickRate,clickHits,clickHot",
+            _:new Date().getTime(),
+            token:token,
         }
 
+		var depect=function(data){
+			var s = "sycmsycmsycmsycm"
+			  , l = CryptoJS.enc.Utf8.parse(s)
+			  , u = {
+				iv: CryptoJS.enc.Utf8.parse("mcysmcysmcysmcys"),
+				mode: CryptoJS.mode.CBC,
+				padding: CryptoJS.pad.Pkcs7
+			}
+
+				n = JSON.parse(CryptoJS.AES.decrypt(function(e) {
+                    return CryptoJS.enc.Base64.stringify(CryptoJS.enc.Hex.parse(e))
+                }(data), l, u).toString(CryptoJS.enc.Utf8))
+
+			return n;
+		}
+
         var process=function(data, textStatus){
+			var data = depect(data.data)
             if((keywordsAll==null||!keywordsAll)&&doSome==''){//只有查词的时候处理方式
                 var json=null;
                 if(data){
-                    var d=data.data;
+                    var d=data;
                     if(Array.isArray(d)){
                         for(var i=0;i<d.length;i++){
                             var di=d[i];
@@ -125,7 +147,7 @@ var main = {
             }else if(doSome=='noRoot'){//处理没有匹配上的关联词
                 var json=null;
                 if(data){
-                    var d=data.data;
+                    var d=data;
                     if(Array.isArray(d)){
                         for(var i=0;i<d.length;i++){
                             var di=d[i];
@@ -165,7 +187,7 @@ var main = {
                 //同时查关联词时的处理方式
                 var backArr=[];
                 if(data){
-                    var d=data.data;
+                    var d=data;
                     if (d !== undefined && d.length != 0) {
                         for(var i=0;i<d.length;i++){
                             var di=d[i];
@@ -248,9 +270,13 @@ var main = {
             }
         }
 
+		
         $.ajax({
             url:"https://sycm.taobao.com/mc/searchword/relatedWord.json",
             type:"GET",
+			headers: {
+			"Transit-Id": "ZvHhfIGqaAnTaLCFFx6yZnHCQOB/adNPdfqNm8ldtUmYsLF9I/cSxmXgi+0fTfyodQQUcPhhvrw3M6oM/0xJYaHWsR/IVShu7auA/LdUpalRFIQLku8aFokepjO0G+zbFkBRKK+ys6jV/g1L/E7HTjADbSgPMRhdsV30gmO+SA4="
+			},
             timeout:30000,
             data:params,
             dataType:"json",
@@ -281,10 +307,10 @@ var main = {
                     token=cv;
                 }
             }
-            // if(!token ||token.length<=0){
-            //     alert("无法获取token");
-            //     return false;
-            // }
+            if(!token ||token.length<=0){
+                alert("无法获取token");
+                return false;
+            }
             $("#resChaci tbody").html("");
             $("#res tbody").html("");
             keywords=keywords.split("\n");
